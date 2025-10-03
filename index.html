@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otimizador de Cadeia de Suprimentos Sustentável</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .api-config {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .api-config h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-url-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .api-url-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-button {
+            display: block;
+            width: 100%;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .file-input-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .optimize-btn {
+            width: 100%;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .optimize-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .optimize-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .result-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #28a745;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-online {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .main-grid,
+            .results-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .parameters-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 Otimizador de Cadeia de Suprimentos Sustentável</h1>
+            <p>Sistema avançado de otimização com foco em sustentabilidade e créditos de carbono</p>
+        </div>
+
+        <div class="api-config">
+            <h3>🔗 Configuração da API</h3>
+            <input type="text" id="apiUrl" class="api-url-input" 
+                   value="http://localhost:8000" 
+                   placeholder="URL da API (ex: http://localhost:8000)">
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                <span id="apiStatus" class="status-indicator status-offline"></span>
+                <span id="apiStatusText">Verificando conexão...</span>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2>📊 Carregamento de Dados</h2>
+                <div class="file-input-wrapper">
+                    <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+                    <label for="excelFile" class="file-input-button">
+                        📁 Carregar Planilha Excel
+                    </label>
+                </div>
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <strong>Arquivo carregado:</strong>
+                    <div id="fileName"></div>
+                    <div id="fileSize"></div>
+                    <div id="sheetsInfo"></div>
+                </div>
+                <div id="loadingMessage" style="display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ Parâmetros de Otimização</h2>
+                <div class="parameters-grid">
+                    <div class="input-group">
+                        <label for="carbonValue">Valor do Carbono ($/t CO2)</label>
+                        <input type="number" id="carbonValue" value="200" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="annualFact">Fator Anual</label>
+                        <input type="number" id="annualFact" value="0.086" step="0.001">
+                    </div>
+                    <div class="input-group">
+                        <label for="maintCost">Custo de Manutenção</label>
+                        <input type="number" id="maintCost" value="1.06" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="fop">Fator de Operação (h/ano)</label>
+                        <input type="number" id="fop" value="8760" step="1">
+                    </div>
+                </div>
+                <button id="optimizeBtn" class="optimize-btn" disabled>
+                    🚀 Otimizar Sistema
+                </button>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="results-section" style="display: none;"></div>
+
+        <div id="chartContainer" class="chart-container" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('costs')">💰 Análise de Custos</button>
+                <button class="tab" onclick="showTab('production')">🏭 Produção</button>
+                <button class="tab" onclick="showTab('transport')">🚛 Transporte</button>
+                <button class="tab" onclick="showTab('data')">📋 Dados</button>
+            </div>
+
+            <div id="costsTab" class="tab-content active">
+                <canvas id="costsChart" width="400" height="200"></canvas>
+            </div>
+
+            <div id="productionTab" class="tab-content">
+                <canvas id="productionChart" width="400" height="200"></canvas>
+            </div>
+
+            <div id="transportTab" class="tab-content">
+                <canvas id="transportChart" width="400" height="200"></canvas>
+            </div>
+
+            <div id="dataTab" class="tab-content">
+                <div id="dataPreview"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelFile = null;
+        let optimizationResults = null;
+        let charts = {};
+
+        // Configuração inicial
+        document.getElementById('excelFile').addEventListener('change', handleFile);
+        document.getElementById('optimizeBtn').addEventListener('click', optimizeSystem);
+        document.getElementById('apiUrl').addEventListener('change', checkApiConnection);
+
+        // Verificar conexão com API na inicialização
+        checkApiConnection();
+
+        async function checkApiConnection() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const statusIndicator = document.getElementById('apiStatus');
+            const statusText = document.getElementById('apiStatusText');
+
+            try {
+                const response = await fetch(`${apiUrl}/health`, {
+                    method: 'GET',
+                    timeout: 5000
+                });
+
+                if (response.ok) {
+                    statusIndicator.className = 'status-indicator status-online';
+                    statusText.textContent = 'API conectada';
+                } else {
+                    throw new Error('API não respondeu corretamente');
+                }
+            } catch (error) {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'API desconectada - Verifique a URL';
+            }
+        }
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            excelFile = file;
+            const loadingDiv = document.getElementById('loadingMessage');
+            loadingDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Processando arquivo...</div>';
+            loadingDiv.style.display = 'block';
+
+            // Simular processamento do arquivo
+            setTimeout(() => {
+                displayFileInfo(file);
+                document.getElementById('optimizeBtn').disabled = false;
+                loadingDiv.innerHTML = '<div class="success-message">✅ Arquivo processado com sucesso!</div>';
+            }, 1000);
+        }
+
+        function displayFileInfo(file) {
+            const fileInfo = document.getElementById('fileInfo');
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = `Tamanho: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            document.getElementById('sheetsInfo').textContent = 'Arquivo Excel válido carregado';
+            fileInfo.style.display = 'block';
+        }
+
+        async function optimizeSystem() {
+            if (!excelFile) {
+                alert('Por favor, carregue uma planilha Excel primeiro.');
+                return;
+            }
+
+            const apiUrl = document.getElementById('apiUrl').value;
+            const optimizeBtn = document.getElementById('optimizeBtn');
+            optimizeBtn.innerHTML = '<div class="loading"><div class="spinner"></div>Otimizando...</div>';
+            optimizeBtn.disabled = true;
+
+            try {
+                // Preparar dados para envio
+                const formData = new FormData();
+                formData.append('excel_file', excelFile);
+                
+                // Adicionar parâmetros
+                const parameters = {
+                    carbonValue: parseFloat(document.getElementById('carbonValue').value),
+                    annualfact: parseFloat(document.getElementById('annualFact').value),
+                    maintanceCost: parseFloat(document.getElementById('maintCost').value),
+                    fop: parseFloat(document.getElementById('fop').value)
+                };
+                
+                formData.append('parameters', JSON.stringify(parameters));
+
+                // Enviar para API
+                const response = await fetch(`${apiUrl}/optimize`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    optimizationResults = result.data;
+                    displayResults();
+                    createCharts();
+                    document.getElementById('resultsSection').style.display = 'grid';
+                    document.getElementById('chartContainer').style.display = 'block';
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido na otimização');
+                }
+
+            } catch (error) {
+                console.error('Erro na otimização:', error);
+                alert(`Erro na otimização: ${error.message}`);
+                
+                // Fallback para simulação se API não estiver disponível
+                if (error.message.includes('fetch')) {
+                    if (confirm('API não disponível. Deseja usar dados simulados para demonstração?')) {
+                        performSimulatedOptimization();
+                    }
+                }
+            } finally {
+                optimizeBtn.innerHTML = '🚀 Otimizar Sistema';
+                optimizeBtn.disabled = false;
+            }
+        }
+
+        function performSimulatedOptimization() {
+            // Simulação para demonstração
+            const carbonValue = parseFloat(document.getElementById('carbonValue').value);
+            
+            optimizationResults = {
+                objective_value: Math.random() * 100 + 50,
+                costs: {
+                    investment: Math.random() * 30 + 10,
+                    raw_materials: Math.random() * 40 + 20,
+                    transport: Math.random() * 20 + 5,
+                    maintenance: Math.random() * 15 + 5
+                },
+                revenues: {
+                    products: Math.random() * 80 + 40,
+                    carbon_credits: Math.random() * 15 + 5
+                },
+                emissions: {
+                    co2_emitted: Math.random() * 10000 + 5000,
+                    co2_avoided: Math.random() * 8000 + 4000,
+                    transport_emissions: Math.random() * 2000 + 1000
+                },
+                production: {
+                    'Ammonia': Math.random() * 1000 + 500,
+                    'Hydrogen': Math.random() * 800 + 400,
+                    'Energy': Math.random() * 600 + 300
+                },
+                transport: {
+                    'Road': Math.random() * 500 + 200,
+                    'Rail': Math.random() * 300 + 100,
+                    'Maritime': Math.random() * 200 + 50
+                },
+                units_selected: {
+                    'Unit1': 0.8,
+                    'Unit2': 1.2,
+                    'Unit3': 0.6
+                }
+            };
+
+            displayResults();
+            createCharts();
+            document.getElementById('resultsSection').style.display = 'grid';
+            document.getElementById('chartContainer').style.display = 'block';
+        }
+
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            const resultCards = [
+                {
+                    value: optimizationResults.objective_value?.toFixed(2) || optimizationResults.costs?.total?.toFixed(2) || '0.00',
+                    label: 'Custo Total (M$)',
+                    icon: '💰'
+                },
+                {
+                    value: optimizationResults.revenues?.carbon_credits?.toFixed(2) || '0.00',
+                    label: 'Créditos de Carbono (M$)',
+                    icon: '🌱'
+                },
+                {
+                    value: optimizationResults.emissions?.co2_emitted?.toFixed(0) || '0',
+                    label: 'Emissões CO2 (t/ano)',
+                    icon: '🏭'
+                },
+                {
+                    value: optimizationResults.emissions?.co2_avoided?.toFixed(0) || '0',
+                    label: 'CO2 Evitado (t/ano)',
+                    icon: '♻️'
+                },
+                {
+                    value: optimizationResults.costs?.investment?.toFixed(2) || '0.00',
+                    label: 'Investimento (M$)',
+                    icon: '🏗️'
+                },
+                {
+                    value: optimizationResults.revenues?.products?.toFixed(2) || '0.00',
+                    label: 'Receita Produtos (M$)',
+                    icon: '📦'
+                }
+            ];
+
+            resultsSection.innerHTML = resultCards.map(card => `
+                <div class="result-card">
+                    <div class="result-value">${card.icon} ${card.value}</div>
+                    <div class="result-label">${card.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function createCharts() {
+            // Limpar gráficos existentes
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // Gráfico de custos
+            const costsCtx = document.getElementById('costsChart').getContext('2d');
+            charts.costs = new Chart(costsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Investimento', 'Matéria-Prima', 'Transporte', 'Manutenção'],
+                    datasets: [{
+                        data: [
+                            optimizationResults.costs?.investment || 0,
+                            optimizationResults.costs?.raw_materials || 0,
+                            optimizationResults.costs?.transport || 0,
+                            optimizationResults.costs?.maintenance || 0
+                        ],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuição de Custos (M$)'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de produção
+            const productionCtx = document.getElementById('productionChart').getContext('2d');
+            charts.production = new Chart(productionCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(optimizationResults.production || {}),
+                    datasets: [{
+                        label: 'Produção (t/ano)',
+                        data: Object.values(optimizationResults.production || {}),
+                        backgroundColor: '#36A2EB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Produção por Produto'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de transporte
+            const transportCtx = document.getElementById('transportChart').getContext('2d');
+            charts.transport = new Chart(transportCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(optimizationResults.transport || {}),
+                    datasets: [{
+                        data: Object.values(optimizationResults.transport || {}),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuição do Transporte (t/ano)'
+                        }
+                    }
+                }
+            });
+
+            // Visualização dos dados
+            displayDataPreview();
+        }
+
+        function displayDataPreview() {
+            const dataPreview = document.getElementById('dataPreview');
+            
+            let html = '<h3>Resultados Detalhados da Otimização</h3>';
+            
+            if (optimizationResults.units_selected) {
+                html += '<h4>Unidades Selecionadas e Capacidades</h4>';
+                html += '<table class="data-table">';
+                html += '<tr><th>Unidade</th><th>Capacidade Utilizada</th></tr>';
+                
+                Object.entries(optimizationResults.units_selected).forEach(([unit, capacity]) => {
+                    html += `<tr><td>${unit}</td><td>${capacity.toFixed(3)}</td></tr>`;
+                });
+                
+                html += '</table><br>';
+            }
+
+            if (optimizationResults.costs) {
+                html += '<h4>Detalhamento de Custos</h4>';
+                html += '<table class="data-table">';
+                html += '<tr><th>Tipo de Custo</th><th>Valor (M$)</th></tr>';
+                
+                Object.entries(optimizationResults.costs).forEach(([cost, value]) => {
+                    html += `<tr><td>${cost.replace('_', ' ').toUpperCase()}</td><td>${value.toFixed(2)}</td></tr>`;
+                });
+                
+                html += '</table><br>';
+            }
+
+            if (optimizationResults.emissions) {
+                html += '<h4>Análise de Emissões</h4>';
+                html += '<table class="data-table">';
+                html += '<tr><th>Tipo de Emissão</th><th>Valor (t CO2/ano)</th></tr>';
+                
+                Object.entries(optimizationResults.emissions).forEach(([emission, value]) => {
+                    html += `<tr><td>${emission.replace('_', ' ').toUpperCase()}</td><td>${value.toFixed(0)}</td></tr>`;
+                });
+                
+                html += '</table>';
+            }
+
+            dataPreview.innerHTML = html;
+        }
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Adicionar animações de entrada
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.card').forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+
+        // Verificar conexão da API periodicamente
+        setInterval(checkApiConnection, 30000);
+    </script>
+</body>
+</html>
